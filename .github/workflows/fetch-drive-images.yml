@@ -1,0 +1,44 @@
+name: Fetch site images from Google Drive
+
+# The client's photography lives in a shared Google Drive folder. This workflow
+# downloads it into assets/img/ and commits the result, so the repository stays
+# self-contained and the site does not hotlink Drive.
+#
+# Run it manually from the Actions tab (Run workflow), or push to the branch
+# below with images still missing.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/happy-bohr-2w6qlz
+    paths:
+      - 'tools/fetch-drive-images.sh'
+      - '.github/workflows/fetch-drive-images.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download images
+        run: bash tools/fetch-drive-images.sh
+
+      - name: Show what landed
+        run: ls -l assets/img/
+
+      - name: Commit images
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/img/
+          if git diff --cached --quiet; then
+            echo "No image changes to commit."
+            exit 0
+          fi
+          git commit -m "Add A1 Lawn Care photography from client Google Drive folder"
+          git push

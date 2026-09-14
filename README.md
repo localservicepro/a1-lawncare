@@ -1,8 +1,179 @@
 # A1 Lawn Care Pty Ltd — website
 
-Website for **A1 Lawn Care Pty Ltd**, 1593 Logan Rd, Mount Gravatt QLD 4122.
+Static marketing site for **A1 Lawn Care Pty Ltd**, 1593 Logan Rd, Mount Gravatt QLD 4122.
 
-Built by Local Service Pro against the *A1 Lawn Care — SEO Website Strategy*
-research document (10 September 2026).
+Built against the *A1 Lawn Care — SEO Website Strategy* research document
+(Local Service Pro, 10 September 2026). Every meta title, meta description, H1
+and target keyword is deployed exactly as that document specifies — none of it
+was re-derived.
 
-See the open pull request for the site build.
+---
+
+## Pages
+
+| Path | H1 | Target keyword |
+|---|---|---|
+| `/` | Professional Lawn Mowing Services in Brisbane & Surrounding Suburbs | lawn mowing services brisbane |
+| `/services/` | Lawn & Garden Services in Brisbane | — (hub) |
+| `/services/lawn-mowing/` | Lawn Mowing Mount Gravatt — Domestic, Acreage & Commercial | lawn mowing mount gravatt |
+| `/services/ndis-lawn-mowing/` | NDIS Registered Lawn Mowing & Yard Maintenance in Brisbane | ndis mowing |
+| `/services/garden-maintenance/` | Garden Maintenance Brisbane — Pruning, Weeding & Edging | garden maintenance brisbane |
+| `/services/palm-tree-removal/` | Palm Tree Removal Brisbane — Fast, Insured, Fully Cleaned Up | palm tree removal brisbane |
+| `/services/green-waste-removal/` | Green Waste Removal Brisbane — Yard & Site Clean-Ups | green waste removal brisbane |
+| `/services/hedge-trimming-lawn-treatments/` | Hedge Trimming & Lawn Treatments — Brisbane Southside | hedge trimming services brisbane |
+| `/about/` | About A1 Lawn Care | — |
+| `/contact/` | Get a Free Lawn Care Quote in Brisbane | — |
+| `/thank-you/` | Thank you! | `noindex` — form destination |
+
+No two pages target the same primary keyword, so none of them compete.
+
+---
+
+## Build
+
+The site is plain static HTML — **you can upload it as-is, no build step
+required.** `build.py` exists so the header, footer, forms, schema and the
+152-suburb service-area block stay identical across all 11 pages.
+
+```bash
+python3 build.py        # regenerates every .html, sitemap.xml, robots.txt, _redirects
+```
+
+No dependencies beyond the Python 3 standard library.
+
+Edit content in `build.py`, not in the generated HTML — a rebuild overwrites it.
+
+```
+build.py                     content + templates (the source of truth)
+assets/css/site.css          design system and animations
+assets/js/site.js            nav, scroll reveal, counters, FAQ, forms
+assets/img/                  photography (see below)
+tools/fetch-drive-images.sh  pulls the client photos from Google Drive
+index.html, services/…       generated output — committed, do not hand-edit
+```
+
+---
+
+## Forms and conversion tracking
+
+The LeadConnector tracking script is installed **once, globally**, in the
+`<head>` of every page:
+
+```html
+<script src="https://link.msgsndr.com/js/external-tracking.js"
+        data-tracking-id="tk_6582cb70c3d84289821c555a3d8691f9"></script>
+```
+
+It detects form submissions itself, so no endpoint is posted to.
+
+Every quote form uses these `name` attributes, mapping 1:1 onto the CRM contact
+record:
+
+| Form label | `name` attribute | CRM field |
+|---|---|---|
+| Name | `full_name` | `{{contact.full_name}}` |
+| Email | `email` | `{{contact.email}}` |
+| Phone | `phone` | `{{contact.phone}}` |
+| Property Address | `property_address` | `{{contact.property_address}}` |
+| Property Size | `property_size` | `{{contact.property_size}}` |
+| Service Needed | `service_needed` | `{{contact.service_needed}}` |
+| Job Notes | `job_notes` | `{{contact.job_notes}}` |
+
+Plus a honeypot field, `company_website`, hidden from people. If it is filled
+in, the submission is dropped silently — **do not map it to a CRM field.**
+
+**Submit flow.** `site.js` validates, lets the submit event reach the tracking
+script, then redirects to `/thank-you/` after 650 ms. Forms appear on the
+homepage, `/contact/` and all six service pages — all eight redirect to
+`/thank-you/`.
+
+Service pages pre-select the matching option in *Service Needed*.
+`/contact/?service=Lawn+mowing` also pre-selects from the query string, which
+is handy for ad landing URLs.
+
+---
+
+## Images
+
+Photography comes from the client's shared Google Drive folder:
+<https://drive.google.com/drive/folders/1T1C1f4PuEdVM7r1dQ7ACiwBtlWEUJccK>
+
+```bash
+bash tools/fetch-drive-images.sh
+```
+
+This downloads the logo, the NDIS provider logo, eight job photos and the about
+photo into `assets/img/`, already WebP and already web-sized. The same script
+runs in `.github/workflows/fetch-drive-images.yml`, which commits the result.
+
+`assets/img/a1-lawn-care-logo.webp` is already committed.
+
+> **Alt text follows the pattern the research specifies** —
+> `Lawn mowing service Mount Gravatt - A1 Lawn Care Brisbane`. Once the photos
+> are in place, check each `alt` and gallery caption in `build.py` actually
+> describes the image it sits on, and adjust which photo goes on which service
+> page. They were assigned by filename, not by looking at them.
+
+---
+
+## Confirm before launch
+
+Everything below is either an estimate or a claim that needs Steve's sign-off.
+Nothing here is fabricated to look like fact, but nothing here is verified
+either.
+
+| Item | Where | Status |
+|---|---|---|
+| **Review quotes** | homepage testimonials | **Placeholders**, labelled as such on the page. Replace with real Google reviews, delete the label in `build.py`, and only then add `AggregateRating` to the schema. |
+| Geo coordinates `-27.5406, 153.0776` | `SITE` in `build.py`, LocalBusiness schema | Approximate for 1593 Logan Rd. Confirm against Google Business Profile. |
+| Opening hours Mon–Fri 7–5, Sat 7–1 | `OPENING_HOURS`, footer, contact, schema | Assumed. Confirm actual hours. |
+| Price ranges ($50–$90 mow, $250–$900 palm, $300–$800 clean-up) | FAQ answers | Estimates. The research strategy calls for answering price openly, but these need Steve's numbers. |
+| "Public liability insured" | `/about/` | Confirm cover is current. |
+| "Since 2019" | `/about/`, schema `foundingDate` | Research says "in business since at least 2019". Confirm the real date. |
+| Service-area suburb list (152) | `SUBURBS` in `build.py` | Compiled to match the research's "150+ suburbs across Brisbane south, Bayside, Logan and Redlands". Trim anything A1 does not actually drive to. |
+
+---
+
+## Post-launch checklist
+
+From the research document, the items that live outside this repository:
+
+1. **Fix the dead Google Business Profile link.** The profile still points at
+   `a1lawncarebrisbane.business.site`, which returns 404. Change it to
+   `https://www.a1lawncare.net.au/`. Highest-impact single fix available.
+2. Verify the property in Google Search Console and submit `/sitemap.xml`.
+3. Install GA4 with conversion events on `tel:` clicks and form submits.
+4. Baseline the 16 suburb keywords in rank tracking *before* this goes live.
+5. Request indexing on each service page as it ships.
+6. Keep NAP identical across the site, GBP and every directory listing.
+
+Already handled in this build: one H1 per page, clean H1→H2→H3 order,
+self-referencing canonicals, unique title and description within limits,
+`en-AU`, pinch-zoom re-enabled, `LocalBusiness` + `Service` + `FAQPage` +
+`BreadcrumbList` schema, the address in text on every page, a quote form on the
+homepage, descriptive alt text, and all 152 suburbs as readable text.
+
+### Answer / generative engines
+
+`robots.txt` explicitly allows GPTBot, OAI-SearchBot, PerplexityBot, ClaudeBot
+and Google-Extended. The research scored the old site 33/100 on agentic
+browsing; the fixes for that are here — NDIS registration stated in readable
+text rather than buried in a logo image, the address and service area written
+out, and an `FAQPage` block on every page in direct-question / direct-answer
+form.
+
+---
+
+## Deploying
+
+Any static host works. The site is plain HTML with no server-side anything.
+
+- **Netlify / Cloudflare Pages** — publish directory `/`. `_redirects` is
+  already written for the legacy WordPress paths.
+- **Apache** — `_redirects` will not be read; port those four rules to
+  `.htaccess`.
+- **Nginx** — same, port them to your server block.
+
+Point `www.a1lawncare.net.au` at it, keep `https://www.a1lawncare.net.au/` as
+the canonical host (that is what the canonical tags and schema use), and make
+sure the non-`www` host 301s to `www`.
