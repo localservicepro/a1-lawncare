@@ -269,6 +269,12 @@
   }
 
   document.querySelectorAll('form.js-quote-form').forEach(function (form) {
+    var button = form.querySelector('button[type="submit"]');
+    var label = form.querySelector('.btn-text');
+    var status = form.querySelector('.form-status');
+    var idleText = label ? label.textContent : '';
+    var busy = false;
+
     // Clear a field's error as soon as the visitor starts fixing it.
     form.addEventListener('input', function (e) {
       var field = e.target.closest('.field');
@@ -276,28 +282,68 @@
     });
 
     form.addEventListener('submit', function (e) {
-      // Honeypot — silently drop obvious bots.
-      var hp = form.querySelector('input[name="company_website"]');
-      if (hp && hp.value) { e.preventDefault(); return; }
-
-      if (!validate(form)) {
-        e.preventDefault();
-        return;
-      }
-
-      // Stop the browser navigating; the tracking script has already seen
-      // this same submit event and captured the named fields.
+      // Always stop the native POST. The tracking script's own submit listener
+      // is registered first (its <script> runs in <head>, ours is deferred),
+      // so it has already captured the named fields by the time we get here.
       e.preventDefault();
-      form.classList.add('is-submitting');
+      if (busy) return;
 
-      var name = form.querySelector('[name="full_name"]');
+      // Honeypot. Only a bot fills a field that is off-screen and out of the
+      // tab order; it is named so browser autofill will not touch it.
+      var hp = form.querySelector('[name="a1_hp"]');
+      if (hp && hp.value) return;
+
+      if (!validate(form)) return;
+
+      busy = true;
+      form.classList.add('is-submitting');
+      if (button) button.setAttribute('aria-busy', 'true');
+      if (label) label.textContent = 'Sending\u2026';
+      if (status) status.textContent = 'Sending your request\u2026';
+
+      var nameField = form.querySelector('[name="full_name"]');
       try {
-        sessionStorage.setItem('a1_lead_name', name ? name.value.trim() : '');
+        sessionStorage.setItem('a1_lead_name', nameField ? nameField.value.trim() : '');
       } catch (err) { /* private browsing — not important */ }
 
-      var redirect = form.getAttribute('data-redirect') || '/thank-you/';
-      // Small delay so the tracking beacon has time to leave the page.
-      window.setTimeout(function () { window.location.href = redirect; }, 650);
+      var target = form.getAttribute('data-redirect') || '/thank-you/';
+      var href = target;
+      // Resolve against the current document so the redirect survives a <base>
+      // tag or a deployment that is not at the domain root.
+      try { href = new URL(target, window.location.href).href; } catch (err) { href = target; }
+
+      var navigated = false;
+      var go = function () {
+        if (navigated) return;
+        navigated = true;
+        window.location.assign(href);
+      };
+
+      // Confirm, then move. Two short steps so the visitor sees the submission
+      // land instead of staring at a button that appears to do nothing.
+      window.setTimeout(function () {
+        form.classList.remove('is-submitting');
+        form.classList.add('is-sent');
+        if (label) label.textContent = 'Sent';
+        if (status) status.textContent = 'Thanks \u2014 taking you to the next step.';
+      }, reduceMotion ? 0 : 520);
+
+      window.setTimeout(go, reduceMotion ? 80 : 950);
+
+      // Safety net. If navigation has not happened, hand the visitor a link
+      // rather than leaving them with a dead button. Never fires on success,
+      // because the page has unloaded by then.
+      window.setTimeout(function () {
+        if (navigated && document.visibilityState === 'hidden') return;
+        busy = false;
+        form.classList.remove('is-submitting', 'is-sent');
+        if (button) button.removeAttribute('aria-busy');
+        if (label) label.textContent = idleText;
+        if (status) {
+          status.innerHTML = 'Your request has been sent. ' +
+            '<a href="' + target + '">Continue to the next step &rarr;</a>';
+        }
+      }, 4000);
     });
   });
 

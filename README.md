@@ -79,11 +79,28 @@ record:
 | Service Needed | `service_needed` | `{{contact.service_needed}}` |
 | Job Notes | `job_notes` | `{{contact.job_notes}}` |
 
-Plus a honeypot field, `company_website`, hidden from people. If it is filled
-in, the submission is dropped silently — **do not map it to a CRM field.**
+Plus a honeypot field, `a1_hp`, hidden from people. If it is filled in, the
+submission is dropped silently — **do not map it to a CRM field.**
 
-**Submit flow.** `site.js` validates, lets the submit event reach the tracking
-script, then redirects to `/thank-you/` after 650 ms.
+> The honeypot was originally named `company_website` with a label to match.
+> Chrome's organisation/URL autofill filled it in for real visitors, whose
+> submissions were then silently dropped as bots — no animation, no redirect.
+> Keep the name meaningless; anything that reads like a real field will hit the
+> same problem.
+
+**Submit flow.** On submit `site.js` stops the native POST, validates, and —
+the tracking script's listener having already captured the fields — shows a
+spinner and "Sending…", then a tick and "Sent", then navigates to
+`/thank-you/` at about 950 ms.
+
+Guards worth knowing about:
+
+- A `busy` flag means repeated clicks fire once.
+- The redirect is resolved with `new URL(target, location.href)`, so it
+  survives a `<base>` tag or a deploy that is not at the domain root.
+- If navigation has not happened after 4 seconds, the form resets itself and
+  the status line offers a plain link to `/thank-you/` — a visitor never ends
+  up looking at a dead button.
 
 **Where the forms are.** Inline on the homepage, `/contact/` and all six
 service pages. On top of that, every page *except* `/contact/` carries the same

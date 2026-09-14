@@ -1280,6 +1280,12 @@ def quote_form(form_id, heading, sub, preselect=None, compact=False, heading_id=
         service_needed   -> {{contact.service_needed}}
         job_notes        -> {{contact.job_notes}}
 
+    Plus an `a1_hp` honeypot, which must NOT be mapped to a CRM field. The
+    name matters: it was `company_website` with a label to match, and Chrome's
+    organisation/URL autofill filled it in for real people, whose submissions
+    were then silently dropped as bots. Anything that looks like a real field
+    name will hit the same problem.
+
     The global LeadConnector external-tracking script captures the submit
     event; site.js then redirects to /thank-you/.
     """
@@ -1296,10 +1302,11 @@ def quote_form(form_id, heading, sub, preselect=None, compact=False, heading_id=
         <h2{heading_id_attr}>{heading}</h2>
         <p class="quote-sub">{sub}</p>
 
-        <!-- Honeypot: hidden from people, irresistible to bots -->
+        <!-- Honeypot -->
         <div class="hp-field" aria-hidden="true">
-          <label for="{form_id}-hp">Company website</label>
-          <input type="text" id="{form_id}-hp" name="company_website" tabindex="-1" autocomplete="off">
+          <label for="{form_id}-hp">Leave this field empty</label>
+          <input type="text" id="{form_id}-hp" name="a1_hp" tabindex="-1"
+                 autocomplete="off" aria-hidden="true">
         </div>
 
         <div class="field-row">
@@ -1356,7 +1363,15 @@ def quote_form(form_id, heading, sub, preselect=None, compact=False, heading_id=
                     placeholder="Anything we should know — gate access, dogs, how long it has been, NDIS plan details&hellip;"></textarea>
         </div>
 
-        <button class="btn btn--lg btn--block" type="submit">Get my free quote {arrow}</button>
+        <button class="btn btn--lg btn--block" type="submit">
+          <span class="btn-spinner" aria-hidden="true"></span>
+          <svg class="btn-tick" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
+               aria-hidden="true"><path d="m20 6-11 11-5-5"/></svg>
+          <span class="btn-text">Get my free quote</span>
+          <span class="btn-arrow">{arrow}</span>
+        </button>
+        <p class="form-status" role="status" aria-live="polite"></p>
         <p class="form-fineprint">No obligation. We usually reply the same day, and
            always within one business day.</p>
       </form>""".format(

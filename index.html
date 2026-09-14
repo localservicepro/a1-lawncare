@@ -146,10 +146,11 @@
         <h2>Get a free quote</h2>
         <p class="quote-sub">Tell us about the property and we will come back with a fixed price.</p>
 
-        <!-- Honeypot: hidden from people, irresistible to bots -->
+        <!-- Honeypot -->
         <div class="hp-field" aria-hidden="true">
-          <label for="hero-quote-hp">Company website</label>
-          <input type="text" id="hero-quote-hp" name="company_website" tabindex="-1" autocomplete="off">
+          <label for="hero-quote-hp">Leave this field empty</label>
+          <input type="text" id="hero-quote-hp" name="a1_hp" tabindex="-1"
+                 autocomplete="off" aria-hidden="true">
         </div>
 
         <div class="field-row">
@@ -206,7 +207,15 @@
                     placeholder="Anything we should know — gate access, dogs, how long it has been, NDIS plan details&hellip;"></textarea>
         </div>
 
-        <button class="btn btn--lg btn--block" type="submit">Get my free quote <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+        <button class="btn btn--lg btn--block" type="submit">
+          <span class="btn-spinner" aria-hidden="true"></span>
+          <svg class="btn-tick" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
+               aria-hidden="true"><path d="m20 6-11 11-5-5"/></svg>
+          <span class="btn-text">Get my free quote</span>
+          <span class="btn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+        </button>
+        <p class="form-status" role="status" aria-live="polite"></p>
         <p class="form-fineprint">No obligation. We usually reply the same day, and
            always within one business day.</p>
       </form>
@@ -574,10 +583,11 @@
         <h2 id="quote-modal-title">Get a free quote</h2>
         <p class="quote-sub">Tell us about the property and we will come back with a fixed price.</p>
 
-        <!-- Honeypot: hidden from people, irresistible to bots -->
+        <!-- Honeypot -->
         <div class="hp-field" aria-hidden="true">
-          <label for="modal-quote-hp">Company website</label>
-          <input type="text" id="modal-quote-hp" name="company_website" tabindex="-1" autocomplete="off">
+          <label for="modal-quote-hp">Leave this field empty</label>
+          <input type="text" id="modal-quote-hp" name="a1_hp" tabindex="-1"
+                 autocomplete="off" aria-hidden="true">
         </div>
 
         <div class="field-row">
@@ -634,7 +644,15 @@
                     placeholder="Anything we should know — gate access, dogs, how long it has been, NDIS plan details&hellip;"></textarea>
         </div>
 
-        <button class="btn btn--lg btn--block" type="submit">Get my free quote <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+        <button class="btn btn--lg btn--block" type="submit">
+          <span class="btn-spinner" aria-hidden="true"></span>
+          <svg class="btn-tick" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
+               aria-hidden="true"><path d="m20 6-11 11-5-5"/></svg>
+          <span class="btn-text">Get my free quote</span>
+          <span class="btn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+        </button>
+        <p class="form-status" role="status" aria-live="polite"></p>
         <p class="form-fineprint">No obligation. We usually reply the same day, and
            always within one business day.</p>
       </form>
