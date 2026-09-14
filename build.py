@@ -170,8 +170,8 @@ SERVICES = [
         "keyword": "lawn mowing mount gravatt",
         "audience": "Homeowners and body corporates in Mount Gravatt, Holland Park and Wishart",
         "icon": "mower",
-        "image": "gallery-01.webp",
-        "alt": "Lawn mowing service Mount Gravatt - A1 Lawn Care Brisbane",
+        "image": "gallery-06.webp",
+        "alt": "Lawn mowing Mount Gravatt - freshly mown backyard lawn and trimmed hedge line by A1 Lawn Care",
         "blurb": (
             "Regular or one-off mowing, edged, whipper-snipped and blown down. "
             "Domestic blocks, acreage and commercial grounds across the southside."
@@ -283,8 +283,8 @@ SERVICES = [
         "keyword": "ndis mowing",
         "audience": "NDIS participants, plan managers and support coordinators",
         "icon": "heart",
-        "image": "gallery-02.webp",
-        "alt": "NDIS registered lawn mowing Brisbane - A1 Lawn Care yard maintenance",
+        "image": "gallery-07.webp",
+        "alt": "NDIS yard maintenance Brisbane - side path and access kept clear by A1 Lawn Care",
         "blurb": (
             "A registered NDIS provider for lawn mowing and yard maintenance, working "
             "directly with participants, plan managers and support coordinators."
@@ -399,8 +399,8 @@ SERVICES = [
         "keyword": "garden maintenance brisbane",
         "audience": "Homeowners, strata managers and rental property managers",
         "icon": "leaf",
-        "image": "gallery-03.webp",
-        "alt": "Garden maintenance Brisbane - weeding and pruning by A1 Lawn Care",
+        "image": "gallery-05.webp",
+        "alt": "Garden maintenance Brisbane - mulched garden beds and edged lawn by A1 Lawn Care",
         "blurb": (
             "Pruning, weeding, mulching and bed edging that keeps a garden looking "
             "deliberate instead of merely cut back."
@@ -501,8 +501,8 @@ SERVICES = [
         "keyword": "palm tree removal brisbane",
         "audience": "Homeowners, acreage owners and commercial site managers",
         "icon": "palm",
-        "image": "gallery-04.webp",
-        "alt": "Palm tree removal Brisbane - A1 Lawn Care removing a cocos palm",
+        "image": "gallery-03.webp",
+        "alt": "Tree and palm removal Brisbane - tidy backyard left clean by A1 Lawn Care",
         "blurb": (
             "Cocos, Alexander and Bangalow palms and small trees removed, cut down, "
             "chipped and carted away — with the site left clean."
@@ -605,8 +605,8 @@ SERVICES = [
         "keyword": "green waste removal brisbane",
         "audience": "Vendors preparing to sell, landlords, builders and tenants at end of lease",
         "icon": "truck",
-        "image": "gallery-05.webp",
-        "alt": "Green waste removal Brisbane - yard clean-up by A1 Lawn Care",
+        "image": "gallery-04.webp",
+        "alt": "Green waste removal Brisbane - overgrown yard before and after an A1 Lawn Care clean-up",
         "blurb": (
             "Overgrown blocks, end-of-lease tidy-ups and site clean-ups cleared, loaded "
             "and taken away in one visit."
@@ -706,8 +706,8 @@ SERVICES = [
         "keyword": "hedge trimming services brisbane",
         "audience": "Homeowners wanting coring, top dressing, weed control and hedging",
         "icon": "hedge",
-        "image": "gallery-06.webp",
-        "alt": "Hedge trimming services Brisbane southside - A1 Lawn Care",
+        "image": "gallery-01.webp",
+        "alt": "Lawn treatments Brisbane - patchy lawn before and after coring and top dressing by A1 Lawn Care",
         "blurb": (
             "Hedges cut straight and squared off, plus the lawn treatments that fix a "
             "tired lawn: coring, top dressing and weed control."
@@ -1566,19 +1566,27 @@ def build_home():
         for text, who, where in TESTIMONIALS
     )
 
+    # Genuine A1 job photos. Captions describe what is in frame — the source
+    # files carry no location data, so no suburb is claimed for a single shot.
     gallery_imgs = [
-        ("gallery-03.webp", "Lawn mowing service Mount Gravatt - A1 Lawn Care Brisbane",
-         "Fortnightly mow, Mount Gravatt"),
-        ("gallery-04.webp", "Palm tree removal Brisbane southside - A1 Lawn Care",
-         "Cocos palm removal, Carindale"),
-        ("gallery-05.webp", "Yard clean-up and green waste removal Brisbane - A1 Lawn Care",
-         "Pre-sale yard clean-up, Springwood"),
-        ("gallery-06.webp", "Hedge trimming Brisbane southside - A1 Lawn Care",
-         "Hedge trimming, Sunnybank"),
-        ("gallery-07.webp", "Garden maintenance Brisbane - weeding and edging by A1 Lawn Care",
-         "Garden tidy, Wynnum"),
-        ("gallery-08.webp", "Lawn coring and top dressing Brisbane - A1 Lawn Care",
-         "Coring and top dressing, Wishart"),
+        ("gallery-08.webp",
+         "Edged lawn with rock border, mown by A1 Lawn Care Brisbane",
+         "Edged lawn and rock border"),
+        ("gallery-02.webp",
+         "Front lawn and trimmed hedges on a Brisbane southside street frontage",
+         "Front lawn and hedge line"),
+        ("gallery-04.webp",
+         "Overgrown yard before and after a green waste clean-up by A1 Lawn Care",
+         "Overgrown slope \u2014 before and after"),
+        ("gallery-01.webp",
+         "Patchy lawn before and after coring and top dressing by A1 Lawn Care",
+         "Lawn repair \u2014 before and after"),
+        ("gallery-06.webp",
+         "Backyard lawn mown and hedge trimmed by A1 Lawn Care Brisbane",
+         "Backyard mow and hedge line"),
+        ("gallery-05.webp",
+         "Mulched garden beds and freshly edged lawn by A1 Lawn Care Brisbane",
+         "Mulched beds and edged lawn"),
     ]
     gallery_html = "".join(
         """<figure class="reveal">
@@ -1724,8 +1732,8 @@ def build_home():
           <div class="section-head section-head--center reveal">
             <span class="eyebrow">Our recent work</span>
             <h2>Jobs from around Brisbane’s southside</h2>
-            <p>Real properties in Mount Gravatt, Carindale, Springwood, Sunnybank,
-               Wynnum and Wishart.</p>
+            <p>Real properties across Brisbane south, Bayside, Logan and the
+               Redlands — photographed on the day.</p>
           </div>
           <div class="gallery">{gallery}</div>
         </div>
@@ -1802,7 +1810,7 @@ def build_services_hub():
     }
 
     body = """
-      <section class="page-hero">
+      <section class="page-hero page-hero--photo">
         <div class="container page-hero-inner">
           <nav class="breadcrumb" aria-label="Breadcrumb">
             <ol><li><a href="/">Home</a></li><li aria-current="page">Services</li></ol>
@@ -1929,7 +1937,9 @@ def build_service(service):
 
     intro_html = "".join("<p>%s</p>" % e(p) for p in service["intro"])
 
-    others = [s for s in SERVICES if s["slug"] != service["slug"]][:2]
+    # Rotate the related pair so each service page cross-links a different two.
+    _i = SERVICES.index(service)
+    others = [SERVICES[(_i + n) % len(SERVICES)] for n in (1, 2)]
     related = "".join(
         '<li><a href="/services/%s/">%s</a></li>' % (s["slug"], e(s["short"]))
         for s in SERVICES
@@ -2184,7 +2194,7 @@ def build_about():
             <div class="reveal">
               <img src="/assets/img/about-a1-lawn-care.webp" width="900" height="620"
                    style="border-radius:24px" decoding="async"
-                   alt="A1 Lawn Care team maintaining a garden in Brisbane southside">
+                   alt="Lawn mower on a freshly cut green lawn - A1 Lawn Care Brisbane">
             </div>
           </div>
         </div>

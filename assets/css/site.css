@@ -428,7 +428,7 @@ form.is-submitting .btn { opacity: .72; pointer-events: none; }
 .section--dark .stat .lbl { color: #A9BCAF; }
 
 /* ---------- Gallery ---------- */
-.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
 .gallery figure {
   margin: 0; border-radius: var(--radius); overflow: hidden; position: relative;
   aspect-ratio: 4 / 3; background: var(--brand-grad-soft);
@@ -554,6 +554,11 @@ form.is-submitting .btn { opacity: .72; pointer-events: none; }
   animation: drift 26s ease-in-out infinite alternate;
 }
 .page-hero-inner { padding-block: clamp(46px, 5.5vw, 86px); max-width: 780px; }
+.page-hero--photo::after {
+  content: ""; position: absolute; inset: 0; z-index: -2;
+  background: url("/assets/img/gardener-at-work.webp") center/cover no-repeat;
+  opacity: .22;
+}
 .page-hero h1 { color: #fff; }
 .page-hero p { color: #B6CCBE; font-size: 1.06rem; margin-bottom: 0; }
 .page-hero .btn-row { margin-top: 1.8rem; }

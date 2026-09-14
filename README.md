@@ -108,11 +108,23 @@ runs in `.github/workflows/fetch-drive-images.yml`, which commits the result.
 
 `assets/img/a1-lawn-care-logo.webp` is already committed.
 
-> **Alt text follows the pattern the research specifies** —
-> `Lawn mowing service Mount Gravatt - A1 Lawn Care Brisbane`. Once the photos
-> are in place, check each `alt` and gallery caption in `build.py` actually
-> describes the image it sits on, and adjust which photo goes on which service
-> page. They were assigned by filename, not by looking at them.
+`gallery-01` … `gallery-08` are genuine A1 job photos and are assigned to the
+service page each one actually illustrates — the overgrown-slope before/after
+sits on green waste removal, the patchy-to-lush before/after sits on lawn
+treatments, and so on. Alt text follows the pattern the research specifies
+(`Lawn mowing Mount Gravatt - … - A1 Lawn Care`).
+
+`about-a1-lawn-care.webp` and `gardener-at-work.webp` are stock, not A1's own
+work, so they are used decoratively only (the about page and the services hero)
+and their alt text does not claim otherwise. Captions in the "Our recent work"
+gallery describe what is in frame and deliberately name no suburb — the source
+files carry no location data.
+
+> **Worth adding:** there is no genuine palm-removal photo in the folder. The
+> tree & palm removal page currently uses a finished-backyard shot. A real
+> before/after of a cocos palm coming out would be the single most valuable
+> photo to add, given that page targets the highest-CPC keyword in the research
+> ($12.42 a click).
 
 ---
 
