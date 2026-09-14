@@ -5,8 +5,9 @@
 #
 #   https://drive.google.com/drive/folders/1T1C1f4PuEdVM7r1dQ7ACiwBtlWEUJccK
 #
-# The files are already WebP and already sized for the web, so they are
-# committed as-is. Run from anywhere:
+# Originals land in assets/img/_src/ and are committed as the source of
+# truth. tools/optimize-images.py turns them into the responsive, compressed
+# files the site actually serves. Run from anywhere:
 #
 #   bash tools/fetch-drive-images.sh
 #
@@ -15,7 +16,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEST="$REPO_ROOT/assets/img"
+DEST="$REPO_ROOT/assets/img/_src"
 mkdir -p "$DEST"
 
 # <drive-file-id>  <destination filename>
@@ -71,4 +72,5 @@ if [ "$failed" -gt 0 ]; then
   echo "Check that the Drive folder is still shared as 'anyone with the link'."
   exit 1
 fi
-echo "All images downloaded."
+echo "All originals downloaded to assets/img/_src/."
+echo "Now run:  python3 tools/optimize-images.py"

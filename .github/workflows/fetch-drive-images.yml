@@ -25,11 +25,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download images
+      - name: Download originals
         run: bash tools/fetch-drive-images.sh
 
+      - name: Generate responsive, compressed variants
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 tools/optimize-images.py
+
       - name: Show what landed
-        run: ls -l assets/img/
+        run: |
+          echo '--- originals ---'; ls -l assets/img/_src/
+          echo '--- served ---';    ls -l assets/img/*.webp
 
       - name: Commit images
         run: |
@@ -40,5 +47,5 @@ jobs:
             echo "No image changes to commit."
             exit 0
           fi
-          git commit -m "Add A1 Lawn Care photography from client Google Drive folder"
+          git commit -m "Refresh A1 Lawn Care photography from the client Google Drive folder"
           git push

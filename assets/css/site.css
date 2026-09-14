@@ -562,7 +562,13 @@ form.is-sent .field select, form.is-sent .field textarea { pointer-events: none;
 .footer-main { display: grid; gap: 38px; grid-template-columns: 1.5fr 1fr 1fr 1.2fr; padding-block: clamp(46px, 5vw, 72px); }
 @media (max-width: 900px) { .footer-main { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 560px) { .footer-main { grid-template-columns: 1fr; } }
-.site-footer h4 { color: #fff; font-size: .82rem; letter-spacing: .13em; text-transform: uppercase; margin-bottom: 1.15em; }
+/* h3, not h4: the footer column headings were changed to keep the document
+   heading order clean, and the old h4-only rule left them inheriting --ink
+   (near-black) on the near-black footer. */
+.site-footer h3, .site-footer h4 {
+  color: #fff; font-size: .82rem; letter-spacing: .13em;
+  text-transform: uppercase; margin-bottom: 1.15em;
+}
 .site-footer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .site-footer a { color: #9FB6A6; text-decoration: none; transition: color .2s; }
 .site-footer a:hover { color: var(--lime-300); }
@@ -701,7 +707,10 @@ form.is-sent .field select, form.is-sent .field textarea { pointer-events: none;
 /* ---------- Responsive ---------- */
 @media (max-width: 1020px) {
   .nav-toggle { display: inline-flex; }
-  .header-phone .txt { display: none; }
+  .header-phone .txt {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
   .primary-nav {
     position: fixed; inset: 0 0 0 auto; width: min(360px, 88vw);
     background: #fff; padding: calc(var(--header-h) + 16px) 20px 100px;

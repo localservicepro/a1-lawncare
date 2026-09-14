@@ -14,6 +14,7 @@ committed alongside this script, so the site can be uploaded to any host with
 no build step required.
 """
 
+import hashlib
 import html
 import os
 import re
@@ -130,6 +131,82 @@ ICONS = {
     "calendar": '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>',
     "camera": '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/>',
 }
+
+
+# ---------------------------------------------------------------------------
+# Asset versioning. Every CSS/JS/image URL carries ?v=<content hash>, so the
+# host can serve them with a one-year immutable cache (see vercel.json) and a
+# changed file still busts the cache the moment its contents change.
+# ---------------------------------------------------------------------------
+_ASSET_HASHES = {}
+
+
+def asset_url(path):
+    """`/assets/css/site.css` -> `/assets/css/site.css?v=1a2b3c4d`."""
+    if path not in _ASSET_HASHES:
+        disk = os.path.join(ROOT, path.lstrip("/"))
+        try:
+            with open(disk, "rb") as fh:
+                _ASSET_HASHES[path] = hashlib.sha1(fh.read()).hexdigest()[:8]
+        except OSError:
+            _ASSET_HASHES[path] = ""
+    stamp = _ASSET_HASHES[path]
+    return (path + "?v=" + stamp) if stamp else path
+
+
+# ---------------------------------------------------------------------------
+# Responsive images. Widths must match tools/optimize-images.py.
+# ---------------------------------------------------------------------------
+IMAGE_WIDTHS = {
+    "gardener-at-work": [480, 960, 1440, 1920],
+    "about-a1-lawn-care": [480, 900, 1400],
+    "a1-lawn-care-logo": [112, 224],
+    "ndis-registered-provider-logo": [180, 360],
+}
+for _n in range(1, 9):
+    IMAGE_WIDTHS["gallery-0%d" % _n] = [400, 600]
+
+# Intrinsic size of each source, so width/height on the tag match the real
+# aspect ratio and the browser reserves the right box (CLS stays at 0).
+IMAGE_RATIO = {
+    "gardener-at-work": (1920, 907),
+    "about-a1-lawn-care": (1700, 800),
+    "a1-lawn-care-logo": (300, 300),
+    "ndis-registered-provider-logo": (672, 155),
+}
+for _n in range(1, 9):
+    IMAGE_RATIO["gallery-0%d" % _n] = (600, 480)
+
+
+def img_tag(name, alt, sizes, css_class="", style="", priority=False,
+            display_width=None, extra=""):
+    """
+    <img> with srcset across the generated widths.
+
+    `sizes` tells the browser how wide the image renders so it can pick the
+    smallest file that will do — without it srcset is close to useless.
+    """
+    widths = IMAGE_WIDTHS[name]
+    iw, ih = IMAGE_RATIO[name]
+    srcset = ", ".join(
+        "%s %dw" % (asset_url("/assets/img/%s-%d.webp" % (name, w)), min(w, iw))
+        for w in widths
+    )
+    fallback = asset_url("/assets/img/%s-%d.webp" % (name, widths[-1]))
+
+    w = display_width or min(widths[-1], iw)
+    h = round(ih * w / iw)
+
+    return (
+        '<img src="{fallback}" srcset="{srcset}" sizes="{sizes}"'
+        ' width="{w}" height="{h}" alt="{alt}"{cls}{style} decoding="async"{load}{extra}>'
+    ).format(
+        fallback=fallback, srcset=srcset, sizes=sizes, w=w, h=h, alt=e(alt),
+        cls=(' class="%s"' % css_class) if css_class else "",
+        style=(' style="%s"' % style) if style else "",
+        load=' fetchpriority="high"' if priority else ' loading="lazy"',
+        extra=(" " + extra) if extra else "",
+    )
 
 
 def icon(name, cls=""):
@@ -917,8 +994,15 @@ TESTIMONIALS = [
 # ---------------------------------------------------------------------------
 # Templates
 # ---------------------------------------------------------------------------
+# The tracking script was render-blocking: PageSpeed measured 2,340ms of the
+# critical path waiting on it, which is most of a 3.0s First Contentful Paint.
+# `defer` removes it from the critical path while keeping document order, so it
+# still executes before site.js and still registers its submit listener before
+# DOMContentLoaded — which is all the form capture depends on.
 TRACKING = (
-    '<script\n'
+    '<link rel="preconnect" href="https://link.msgsndr.com" crossorigin>\n'
+    '    <script\n'
+    '      defer\n'
     '      src="https://link.msgsndr.com/js/external-tracking.js"\n'
     '      data-tracking-id="tk_6582cb70c3d84289821c555a3d8691f9"\n'
     '    ></script>'
@@ -953,8 +1037,8 @@ def local_business_schema():
         '"@id":"%(origin)s/#business",'
         '"name":"%(legal_name)s","alternateName":"%(name)s",'
         '"url":"%(origin)s/","telephone":"%(phone_e164)s","email":"%(email)s",'
-        '"image":"%(origin)s/assets/img/a1-lawn-care-logo.webp",'
-        '"logo":"%(origin)s/assets/img/a1-lawn-care-logo.webp",'
+        '"image":"%(origin)s/assets/img/a1-lawn-care-logo-224.webp",'
+        '"logo":"%(origin)s/assets/img/a1-lawn-care-logo-224.webp",'
         '"priceRange":"$$","currenciesAccepted":"AUD",'
         '"paymentAccepted":"Cash, Bank transfer, Credit card, NDIS plan managed",'
         '"foundingDate":"%(founded)s",'
@@ -1024,6 +1108,15 @@ def _json_str(value):
     )
 
 
+def _og_variant(filename):
+    """Map an og:image name onto the largest generated variant of it."""
+    name = filename.replace(".webp", "")
+    widths = IMAGE_WIDTHS.get(name)
+    if not widths:
+        return filename
+    return "%s-%d.webp" % (name, widths[-1])
+
+
 def head(page):
     """<head> block. One canonical, one title, one description per page."""
     robots = (
@@ -1032,7 +1125,9 @@ def head(page):
         else '<meta name="robots" content="index, follow, max-image-preview:large, '
         'max-snippet:-1, max-video-preview:-1">'
     )
-    og_image = SITE["origin"] + "/assets/img/" + page.get("og_image", "a1-lawn-care-logo.webp")
+    og_image = SITE["origin"] + "/assets/img/" + _og_variant(
+        page.get("og_image", "a1-lawn-care-logo.webp")
+    )
     schemas = "".join(
         '\n    <script type="application/ld+json">%s</script>' % s
         for s in page.get("schema", [])
@@ -1063,15 +1158,15 @@ def head(page):
     <meta name="twitter:image" content="{og_image}">
 
     <meta name="theme-color" content="#05301A">
-    <link rel="icon" href="/assets/img/a1-lawn-care-logo.webp" type="image/webp">
-    <link rel="apple-touch-icon" href="/assets/img/a1-lawn-care-logo.webp">
+    <link rel="icon" href="@@ASSET:/assets/img/a1-lawn-care-logo-224.webp@@" type="image/webp">
+    <link rel="apple-touch-icon" href="@@ASSET:/assets/img/a1-lawn-care-logo-224.webp@@">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" as="style" href="{fonts}">
     <link rel="stylesheet" href="{fonts}" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="{fonts}"></noscript>
-    <link rel="stylesheet" href="/assets/css/site.css">
+    <link rel="stylesheet" href="@@ASSET:/assets/css/site.css@@">
     <script>document.documentElement.className += " js";</script>
 
     <!-- Conversion tracking: installed once, globally. Detects form submissions. -->
@@ -1130,7 +1225,10 @@ def header(current):
     <header class="site-header">
       <div class="container header-inner">
         <a class="brand" href="/">
-          <img src="/assets/img/a1-lawn-care-logo.webp" width="52" height="52"
+          <img src="@@ASSET:/assets/img/a1-lawn-care-logo-112.webp@@"
+               srcset="@@ASSET:/assets/img/a1-lawn-care-logo-112.webp@@ 112w,
+                       @@ASSET:/assets/img/a1-lawn-care-logo-224.webp@@ 224w"
+               sizes="52px" width="52" height="52" fetchpriority="high"
                alt="A1 Lawn Care Pty Ltd logo - lawn mowing Brisbane">
           <span class="brand-text">
             <span class="brand-name">A1 Lawn Care</span>
@@ -1199,15 +1297,20 @@ def footer(current=""):
         <div class="footer-main">
           <div>
             <a class="footer-brand" href="/">
-              <img src="/assets/img/a1-lawn-care-logo.webp" width="54" height="54"
+              <img src="@@ASSET:/assets/img/a1-lawn-care-logo-112.webp@@"
+                   srcset="@@ASSET:/assets/img/a1-lawn-care-logo-112.webp@@ 112w,
+                           @@ASSET:/assets/img/a1-lawn-care-logo-224.webp@@ 224w"
+                   sizes="54px" width="54" height="54" loading="lazy"
                    alt="A1 Lawn Care Pty Ltd logo">
               <span>A1 Lawn Care</span>
             </a>
             <p>NDIS registered lawn mowing and garden maintenance, based at Mount
                Gravatt and covering more than 150 suburbs across Brisbane south,
                Bayside, Logan and the Redlands.</p>
-            <img class="footer-ndis" src="/assets/img/ndis-registered-provider-logo.webp"
-                 width="150" height="47" loading="lazy"
+            <img class="footer-ndis" src="@@ASSET:/assets/img/ndis-registered-provider-logo-180.webp@@"
+                 srcset="@@ASSET:/assets/img/ndis-registered-provider-logo-180.webp@@ 180w,
+                         @@ASSET:/assets/img/ndis-registered-provider-logo-360.webp@@ 360w"
+                 sizes="150px" width="150" height="35" loading="lazy"
                  alt="NDIS registered provider - A1 Lawn Care Brisbane">
           </div>
 
@@ -1252,7 +1355,8 @@ def footer(current=""):
       {mobile_quote_cta}
     </div>
 
-    <script src="/assets/js/site.js" defer></script>""".format(
+    <!-- defer: runs after the deferred tracking script in <head>, before DOMContentLoaded -->
+    <script src="@@ASSET:/assets/js/site.js@@" defer></script>""".format(
         service_links=service_links,
         hours_rows=hours_rows,
         mobile_quote_cta=mobile_quote_cta,
@@ -1467,10 +1571,7 @@ def services_grid(exclude=None, limit=None):
         shown = shown[:limit]
     for s in shown:
         cards += """<a class="card service-card" href="/services/{slug}/">
-          <div class="media">
-            <img src="/assets/img/{image}" width="640" height="400" loading="lazy"
-                 decoding="async" alt="{alt}">
-          </div>
+          <div class="media">{img}</div>
           <div class="body">
             <h3>{short}</h3>
             <p>{blurb}</p>
@@ -1478,8 +1579,7 @@ def services_grid(exclude=None, limit=None):
           </div>
         </a>""".format(
             slug=s["slug"],
-            image=s["image"],
-            alt=e(s["alt"]),
+            img=img_tag(s["image"].replace(".webp", ""), s["alt"], "(max-width: 700px) calc(100vw - 44px), (max-width: 1100px) 45vw, 33vw"),
             short=e(s["short"]),
             blurb=e(s["blurb"]),
             arrow=icon("arrow"),
@@ -1492,12 +1592,18 @@ def hero_photo(image, alt, priority=False):
     Full-bleed hero photograph, layered behind a readability scrim
     (.hero-photo::after). Only used where a large source image exists.
     """
+    name = image.replace(".webp", "")
+    # Below 940px the scrim over this photo is 90% opaque, so resolution buys
+    # nothing there — pin phones to the smallest file instead of letting srcset
+    # pick a 2x-density one for an image nobody can really see.
     return """<div class="hero-photo">
-          <img src="/assets/img/{image}" width="1600" height="800" alt="{alt}"
-               decoding="async"{priority}>
+          <picture>
+            <source media="(max-width: 940px)" srcset="{small}">
+            {img}
+          </picture>
         </div>""".format(
-        image=image, alt=e(alt),
-        priority=' fetchpriority="high"' if priority else ' loading="lazy"',
+        small=asset_url("/assets/img/%s-480.webp" % name),
+        img=img_tag(name, alt, "100vw", priority=priority),
     )
 
 
@@ -1508,9 +1614,14 @@ def hero_media(image, alt, width=600, height=480):
     across a full-bleed background.
     """
     return """<figure class="page-hero-media">
-            <img src="/assets/img/{image}" width="{w}" height="{h}" alt="{alt}"
-                 fetchpriority="high" decoding="async">
-          </figure>""".format(image=image, alt=e(alt), w=width, h=height)
+            {img}
+          </figure>""".format(
+        img=img_tag(
+            image.replace(".webp", ""), alt,
+            "(max-width: 940px) calc(100vw - 44px), 46vw",
+            priority=True,
+        ),
+    )
 
 
 def quote_modal():
@@ -1648,7 +1759,7 @@ def build_home():
 
     quotes_html = "".join(
         """<div class="quote-item reveal">
-          <div class="stars" aria-label="5 out of 5 stars">{stars}</div>
+          <div class="stars" role="img" aria-label="5 out of 5 stars">{stars}</div>
           <blockquote>&ldquo;{text}&rdquo;</blockquote>
           <cite>{who}</cite>
           <span class="where">{where}</span>
@@ -1685,11 +1796,16 @@ def build_home():
     ]
     gallery_html = "".join(
         """<figure class="reveal">
-          <img src="/assets/img/{src}" width="600" height="450" loading="lazy"
-               decoding="async" alt="{alt}">
+          {img}
           <figcaption>{cap}</figcaption>
-        </figure>""".format(src=src, alt=e(alt), cap=e(cap))
-        for src, alt, cap in gallery_imgs
+        </figure>""".format(
+            img=img_tag(
+                fname.replace(".webp", ""), alt,
+                "(max-width: 700px) calc(100vw - 44px), (max-width: 1100px) 45vw, 33vw",
+            ),
+            cap=e(cap),
+        )
+        for fname, alt, cap in gallery_imgs
     )
 
     body = """
@@ -1790,8 +1906,10 @@ def build_home():
                 <li>{check}<span>Paths, doorways and access kept clear as part of every visit</span></li>
                 <li>{check}<span>Same crew, same day, every cycle wherever possible</span></li>
               </ul>
-              <img src="/assets/img/ndis-registered-provider-logo.webp" width="180" height="56"
-                   loading="lazy" style="margin-top:26px"
+              <img src="@@ASSET:/assets/img/ndis-registered-provider-logo-180.webp@@"
+                   srcset="@@ASSET:/assets/img/ndis-registered-provider-logo-180.webp@@ 180w,
+                           @@ASSET:/assets/img/ndis-registered-provider-logo-360.webp@@ 360w"
+                   sizes="180px" width="180" height="42" loading="lazy" style="margin-top:26px"
                    alt="NDIS registered provider logo - A1 Lawn Care Brisbane">
             </div>
           </div>
@@ -2175,17 +2293,15 @@ def _preselect_for(service):
 
 def _service_card(s):
     return """<a class="card service-card" href="/services/{slug}/">
-      <div class="media">
-        <img src="/assets/img/{image}" width="640" height="400" loading="lazy"
-             decoding="async" alt="{alt}">
-      </div>
+      <div class="media">{img}</div>
       <div class="body">
         <h3>{short}</h3>
         <p>{blurb}</p>
         <span class="more">Read more {arrow}</span>
       </div>
     </a>""".format(
-        slug=s["slug"], image=s["image"], alt=e(s["alt"]),
+        slug=s["slug"],
+        img=img_tag(s["image"].replace(".webp", ""), s["alt"], "(max-width: 700px) calc(100vw - 44px), (max-width: 1100px) 45vw, 33vw"),
         short=e(s["short"]), blurb=e(s["blurb"]), arrow=icon("arrow"),
     )
 
@@ -2303,9 +2419,7 @@ def build_about():
                  hard to clear.</p>
             </div>
             <div class="reveal">
-              <img src="/assets/img/about-a1-lawn-care.webp" width="1700" height="800"
-                   style="border-radius:24px" loading="lazy" decoding="async"
-                   alt="Lawn mower on a freshly mown green lawn - A1 Lawn Care Brisbane">
+              {about_img}
             </div>
           </div>
         </div>
@@ -2373,6 +2487,12 @@ def build_about():
 
 {cta}
 """.format(
+        about_img=img_tag(
+            "about-a1-lawn-care",
+            "Lawn mower on a freshly mown green lawn - A1 Lawn Care Brisbane",
+            "(max-width: 940px) calc(100vw - 44px), 46vw",
+            style="border-radius:24px",
+        ),
         hero_photo=hero_media(
             "gallery-02.webp",
             "Front lawn and trimmed hedges maintained by A1 Lawn Care on a "
@@ -2611,8 +2731,12 @@ def build_thank_you():
 # ---------------------------------------------------------------------------
 # Output
 # ---------------------------------------------------------------------------
+_ASSET_MARKER = re.compile(r"@@ASSET:([^@]+)@@")
+
+
 def write(path, content):
     """Write `content` to `path` (a site path such as '/about/')."""
+    content = _ASSET_MARKER.sub(lambda m: asset_url(m.group(1)), content)
     rel = path.strip("/")
     target = os.path.join(ROOT, rel, "index.html") if rel else os.path.join(ROOT, "index.html")
     os.makedirs(os.path.dirname(target), exist_ok=True)

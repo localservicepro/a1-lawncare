@@ -126,14 +126,20 @@ Photography comes from the client's shared Google Drive folder:
 <https://drive.google.com/drive/folders/1T1C1f4PuEdVM7r1dQ7ACiwBtlWEUJccK>
 
 ```bash
-bash tools/fetch-drive-images.sh
+bash tools/fetch-drive-images.sh      # originals  -> assets/img/_src/
+python3 tools/optimize-images.py      # served set -> assets/img/
 ```
 
-This downloads the logo, the NDIS provider logo, eight job photos and the about
-photo into `assets/img/`, already WebP and already web-sized. The same script
-runs in `.github/workflows/fetch-drive-images.yml`, which commits the result.
+`assets/img/_src/` holds the untouched Drive originals and is the source of
+truth. `tools/optimize-images.py` (needs `Pillow`) resizes and re-compresses
+them into the responsive set the site actually serves —
+`gallery-06-400.webp`, `gallery-06-600.webp` and so on. Re-running is lossless
+because it always starts from `_src/`; never re-encode a WebP you already
+re-encoded.
 
-`assets/img/a1-lawn-care-logo.webp` is already committed.
+Widths live in one place, `PLAN` in the optimiser and `IMAGE_WIDTHS` in
+`build.py` — change both together. `.github/workflows/fetch-drive-images.yml`
+runs the pair and commits the result.
 
 `gallery-01` … `gallery-08` are genuine A1 job photos and are assigned to the
 service page each one actually illustrates — the overgrown-slope before/after
@@ -163,6 +169,50 @@ photograph in a card on the right (`.page-hero--split`) — because the job phot
 are 600x480 and a card keeps them near native size rather than upscaling them
 across a full-width background. On narrow screens the card stacks under the
 heading.
+
+---
+
+## Performance
+
+PageSpeed mobile flagged two things on the first deploy, both now fixed:
+
+**The tracking script was render-blocking** — 2,340 ms of the critical path, on
+a 3.0 s First Contentful Paint. It now carries `defer`, plus a `preconnect`.
+Deferred scripts still execute in document order, so it runs before `site.js`
+and still registers its submit listener before `DOMContentLoaded`, which is all
+the form capture depends on.
+
+**Images were wildly oversized** — a 158 KiB, 1920px hero painted behind a
+90%-opaque scrim on a 366px phone, and a 300x300 logo rendering at 46px.
+Everything is now served through `srcset`/`sizes` at the width it actually
+renders. The homepage hero additionally uses `<picture>` to pin phones to the
+480px file, because below 940px the scrim makes resolution irrelevant.
+
+Measured with Lighthouse 13.4.1, mobile, identical conditions, third party
+stubbed at its real size and latency:
+
+| | before | after |
+|---|---|---|
+| Performance | 92 | **99** |
+| Accessibility | 90 | **100** |
+| First Contentful Paint | 1.8 s | **1.2 s** |
+| Largest Contentful Paint | 2.8 s | **2.2 s** |
+| Speed Index | 4.4 s | **1.2 s** |
+| Page weight | 377 KiB | **232 KiB** |
+
+Local numbers run better than PageSpeed's because there is no real network in
+between; the deltas are the meaningful part.
+
+Accessibility went to 100 by fixing three genuine faults: the footer column
+headings were rendering near-black on the near-black footer (they moved from
+`h4` to `h3` for heading order and the old `h4`-only rule stopped applying),
+the header phone link lost its accessible name when its label was hidden below
+1020px, and the review star rows used `aria-label` on a bare `div`.
+
+**Caching.** Every CSS, JS and image URL carries `?v=<content hash>`, so
+`vercel.json` can serve `/assets/*` with a one-year immutable cache and a
+changed file still busts it. If you host somewhere other than Vercel, port
+those headers — without them repeat visits refetch everything.
 
 ---
 
