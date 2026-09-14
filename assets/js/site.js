@@ -315,7 +315,81 @@
   }
 
   /* ---------------------------------------------------------------
-     9. Prefill the service dropdown from ?service= on the contact page
+     9. Quote modal
+     ---------------------------------------------------------------
+     Rendered on every page except /contact/, where the form is already the
+     main content and the CTA is a plain anchor to it instead.
+     --------------------------------------------------------------- */
+  var quoteModal = document.getElementById('quote-modal');
+  if (quoteModal) {
+    var modalPanel = quoteModal.querySelector('.modal-panel');
+    var lastFocused = null;
+    var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]),' +
+                    ' select:not([disabled]), textarea:not([disabled]),' +
+                    ' [tabindex]:not([tabindex="-1"])';
+
+    var focusables = function () {
+      return Array.prototype.filter.call(
+        quoteModal.querySelectorAll(FOCUSABLE),
+        function (el) { return el.offsetParent !== null; }
+      );
+    };
+
+    var openModal = function () {
+      lastFocused = document.activeElement;
+      closeNav();
+      quoteModal.hidden = false;
+      document.body.classList.add('modal-open');
+      // Force a frame so the opening transition actually runs.
+      requestAnimationFrame(function () {
+        quoteModal.classList.add('is-open');
+        var first = quoteModal.querySelector('input, select, textarea');
+        if (first) first.focus({ preventScroll: true });
+      });
+    };
+
+    var closeModal = function () {
+      quoteModal.classList.remove('is-open');
+      document.body.classList.remove('modal-open');
+      window.setTimeout(function () {
+        // Guard against a re-open landing inside this timeout.
+        if (!quoteModal.classList.contains('is-open')) quoteModal.hidden = true;
+      }, reduceMotion ? 0 : 340);
+      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
+    };
+
+    document.querySelectorAll('[data-quote-open]').forEach(function (trigger) {
+      trigger.addEventListener('click', function (e) {
+        e.preventDefault();
+        openModal();
+      });
+    });
+
+    quoteModal.querySelectorAll('[data-modal-close]').forEach(function (btn) {
+      btn.addEventListener('click', closeModal);
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (quoteModal.hidden) return;
+      if (e.key === 'Escape') { e.stopPropagation(); closeModal(); return; }
+      if (e.key !== 'Tab') return;
+
+      var items = focusables();
+      if (!items.length) return;
+      var first = items[0];
+      var last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      } else if (!modalPanel.contains(document.activeElement)) {
+        e.preventDefault(); first.focus();
+      }
+    });
+  }
+
+  /* ---------------------------------------------------------------
+     10. Prefill the service dropdown from ?service= on the contact page
      --------------------------------------------------------------- */
   var params = new URLSearchParams(window.location.search);
   var wantedService = params.get('service');

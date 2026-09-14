@@ -1108,6 +1108,13 @@ def header(current):
         for s in SERVICES
     )
     services_open = current.startswith("/services/")
+    # On /contact/ the quote form is the page, so the CTA jumps to it.
+    # Everywhere else it opens the quote modal without leaving the page.
+    quote_cta = (
+        '<a class="btn" href="#contact-quote">Free quote</a>'
+        if current == "/contact/"
+        else '<button class="btn" type="button" data-quote-open>Free quote</button>'
+    )
     return """<a class="skip-link" href="#main">Skip to content</a>
 
     <div class="topbar">
@@ -1148,7 +1155,7 @@ def header(current):
 
         <div class="header-cta">
           <a class="header-phone" href="{phone_href}">{phone_icon}<span class="txt">{phone_display}</span></a>
-          <a class="btn" href="/contact/">Free quote</a>
+          {quote_cta}
           <button class="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false">
             <span></span>
           </button>
@@ -1161,6 +1168,7 @@ def header(current):
         contact=nav_link("Contact", "/contact/", current),
         subs=subs,
         open_cls=" is-open" if False else "",
+        quote_cta=quote_cta,
         expanded="true" if services_open else "false",
         chev=icon("chevron"),
         phone_icon=icon("phone"),
@@ -1168,7 +1176,7 @@ def header(current):
     )
 
 
-def footer():
+def footer(current=""):
     service_links = "".join(
         '<li><a href="/services/%s/">%s</a></li>' % (s["slug"], e(s["short"]))
         for s in SERVICES
@@ -1179,6 +1187,12 @@ def footer():
         else "<div><span style=\"padding-left:1.7em\"><strong>%s</strong><br>%s</span></div>"
         % (label, hours)
         for i, (_, _, _, label, hours) in enumerate(OPENING_HOURS)
+    )
+    mobile_quote_cta = (
+        '<a class="primary" href="#contact-quote">%sFree quote</a>' % icon("mail")
+        if current == "/contact/"
+        else '<button class="primary" type="button" data-quote-open>%sFree quote</button>'
+        % icon("mail")
     )
     return """<footer class="site-footer">
       <div class="container">
@@ -1235,12 +1249,13 @@ def footer():
 
     <div class="mobile-bar">
       <a href="{phone_href}">{phone}Call now</a>
-      <a class="primary" href="/contact/">{mail}Free quote</a>
+      {mobile_quote_cta}
     </div>
 
     <script src="/assets/js/site.js" defer></script>""".format(
         service_links=service_links,
         hours_rows=hours_rows,
+        mobile_quote_cta=mobile_quote_cta,
         year=date.today().year,
         pin=icon("pin"),
         phone=icon("phone"),
@@ -1253,7 +1268,7 @@ def footer():
 # ---------------------------------------------------------------------------
 # Shared page sections
 # ---------------------------------------------------------------------------
-def quote_form(form_id, heading, sub, preselect=None, compact=False):
+def quote_form(form_id, heading, sub, preselect=None, compact=False, heading_id=None):
     """
     Quote form. Field names map straight onto the CRM contact record:
 
@@ -1278,7 +1293,7 @@ def quote_form(form_id, heading, sub, preselect=None, compact=False):
 
     return """<form class="js-quote-form" id="{form_id}" data-redirect="/thank-you/"
             action="/thank-you/" method="post" novalidate>
-        <h2>{heading}</h2>
+        <h2{heading_id_attr}>{heading}</h2>
         <p class="quote-sub">{sub}</p>
 
         <!-- Honeypot: hidden from people, irresistible to bots -->
@@ -1346,6 +1361,7 @@ def quote_form(form_id, heading, sub, preselect=None, compact=False):
            always within one business day.</p>
       </form>""".format(
         form_id=form_id,
+        heading_id_attr=(' id="%s"' % heading_id) if heading_id else "",
         heading=e(heading),
         sub=e(sub),
         options=options,
@@ -1456,6 +1472,63 @@ def services_grid(exclude=None, limit=None):
     return '<div class="grid grid--3 reveal-stagger">%s</div>' % cards
 
 
+def hero_photo(image, alt, priority=False):
+    """
+    Full-bleed hero photograph, layered behind a readability scrim
+    (.hero-photo::after). Only used where a large source image exists.
+    """
+    return """<div class="hero-photo">
+          <img src="/assets/img/{image}" width="1600" height="800" alt="{alt}"
+               decoding="async"{priority}>
+        </div>""".format(
+        image=image, alt=e(alt),
+        priority=' fetchpriority="high"' if priority else ' loading="lazy"',
+    )
+
+
+def hero_media(image, alt, width=600, height=480):
+    """
+    Hero photograph as a card beside the heading. The job photos are 600x480,
+    so a card keeps them at roughly native size instead of upscaling them
+    across a full-bleed background.
+    """
+    return """<figure class="page-hero-media">
+            <img src="/assets/img/{image}" width="{w}" height="{h}" alt="{alt}"
+                 fetchpriority="high" decoding="async">
+          </figure>""".format(image=image, alt=e(alt), w=width, h=height)
+
+
+def quote_modal():
+    """
+    Quote form in a dialog. Rendered on every page except /contact/, where the
+    form is already the main content. Opened by any [data-quote-open] control.
+    """
+    return """<div class="modal" id="quote-modal" hidden>
+      <div class="modal-backdrop" data-modal-close></div>
+      <div class="modal-panel quote-card" role="dialog" aria-modal="true"
+           aria-labelledby="quote-modal-title">
+        <button class="modal-close" type="button" data-modal-close aria-label="Close quote form">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+               stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+        {form}
+        <div class="ndis-note">{shield}
+          <span><strong>NDIS participants welcome.</strong> We are a registered
+          provider and invoice plan managers directly &mdash; just mention it in the
+          job notes.</span>
+        </div>
+      </div>
+    </div>""".format(
+        form=quote_form(
+            "modal-quote",
+            "Get a free quote",
+            "Tell us about the property and we will come back with a fixed price.",
+            heading_id="quote-modal-title",
+        ),
+        shield=icon("shield"),
+    )
+
+
 def page(page_meta, body):
     return """<!DOCTYPE html>
 <html lang="en-AU">
@@ -1470,9 +1543,16 @@ def page(page_meta, body):
     </main>
 
     {footer}
+{modal}
   </body>
 </html>
-""".format(head=head(page_meta), header=header(page_meta["path"]), body=body, footer=footer())
+""".format(
+        head=head(page_meta),
+        header=header(page_meta["path"]),
+        body=body,
+        footer=footer(page_meta["path"]),
+        modal="" if page_meta["path"] == "/contact/" else quote_modal(),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1599,7 +1679,8 @@ def build_home():
 
     body = """
       <!-- ============================ HERO ============================ -->
-      <section class="hero">
+      <section class="hero hero--photo">
+        {hero_photo}
         <div class="container hero-inner">
           <div>
             <div class="hero-badges reveal">
@@ -1758,6 +1839,12 @@ def build_home():
 
 {faq}
 """.format(
+        hero_photo=hero_photo(
+            "gardener-at-work.webp",
+            "Established garden bed in a Brisbane southside yard maintained by "
+            "A1 Lawn Care",
+            priority=True,
+        ),
         shield=icon("shield"),
         pin=icon("pin"),
         check=icon("check"),
@@ -1810,19 +1897,22 @@ def build_services_hub():
     }
 
     body = """
-      <section class="page-hero page-hero--photo">
-        <div class="container page-hero-inner">
-          <nav class="breadcrumb" aria-label="Breadcrumb">
-            <ol><li><a href="/">Home</a></li><li aria-current="page">Services</li></ol>
-          </nav>
-          <h1>Lawn &amp; Garden Services in Brisbane</h1>
-          <p>Six services covering everything a south-east Queensland yard throws at you
-             &mdash; from a fortnightly mow in Mount Gravatt to clearing an overgrown
-             block in Logan. All quoted up front, all cleaned up before we leave.</p>
-          <div class="btn-row">
-            <a class="btn btn--lg" href="/contact/">Get a free quote {arrow}</a>
-            <a class="btn btn--outline-light btn--lg" href="{phone_href}">{phone} {phone_display}</a>
+      <section class="page-hero page-hero--split">
+        <div class="container page-hero-grid">
+          <div class="page-hero-inner">
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+              <ol><li><a href="/">Home</a></li><li aria-current="page">Services</li></ol>
+            </nav>
+            <h1>Lawn &amp; Garden Services in Brisbane</h1>
+            <p>Six services covering everything a south-east Queensland yard throws at you
+               &mdash; from a fortnightly mow in Mount Gravatt to clearing an overgrown
+               block in Logan. All quoted up front, all cleaned up before we leave.</p>
+            <div class="btn-row">
+              <a class="btn btn--lg" href="/contact/">Get a free quote {arrow}</a>
+              <a class="btn btn--outline-light btn--lg" href="{phone_href}">{phone} {phone_display}</a>
+            </div>
           </div>
+          {hero_photo}
         </div>
       </section>
 
@@ -1861,6 +1951,10 @@ def build_services_hub():
 
 {cta}
 """.format(
+        hero_photo=hero_media(
+            "gallery-05.webp",
+            "Mulched garden beds and freshly edged lawn by A1 Lawn Care Brisbane",
+        ),
         arrow=icon("arrow"),
         phone=icon("phone"),
         grid=services_grid(),
@@ -1946,30 +2040,30 @@ def build_service(service):
     )
 
     body = """
-      <section class="page-hero">
-        <div class="container page-hero-inner">
-          <nav class="breadcrumb" aria-label="Breadcrumb">
-            <ol>
-              <li><a href="/">Home</a></li>
-              <li><a href="/services/">Services</a></li>
-              <li aria-current="page">{short}</li>
-            </ol>
-          </nav>
-          <h1>{h1}</h1>
-          <p>{lede}</p>
-          <div class="btn-row">
-            <a class="btn btn--lg" href="#quote">Get a free quote {arrow}</a>
-            <a class="btn btn--outline-light btn--lg" href="{phone_href}">{phone} {phone_display}</a>
+      <section class="page-hero page-hero--split">
+        <div class="container page-hero-grid">
+          <div class="page-hero-inner">
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+              <ol>
+                <li><a href="/">Home</a></li>
+                <li><a href="/services/">Services</a></li>
+                <li aria-current="page">{short}</li>
+              </ol>
+            </nav>
+            <h1>{h1}</h1>
+            <p>{lede}</p>
+            <div class="btn-row">
+              <a class="btn btn--lg" href="#quote">Get a free quote {arrow}</a>
+              <a class="btn btn--outline-light btn--lg" href="{phone_href}">{phone} {phone_display}</a>
+            </div>
           </div>
+          {hero_photo}
         </div>
       </section>
 
       <section class="section">
         <div class="container with-aside">
           <div class="prose reveal">
-            <img src="/assets/img/{image}" width="900" height="560"
-                 style="border-radius:22px;margin-bottom:2rem" decoding="async"
-                 alt="{alt}">
             {intro}
             {sections}
 
@@ -2022,8 +2116,7 @@ def build_service(service):
         short_lower=e(service["short"].lower()),
         h1=e(service["h1"]),
         lede=e(service["hero_lede"]),
-        image=service["image"],
-        alt=e(service["alt"]),
+        hero_photo=hero_media(service["image"], service["alt"]),
         intro=intro_html,
         sections=sections_html,
         audience=e(service["audience"]),
@@ -2153,19 +2246,22 @@ def build_about():
     )
 
     body = """
-      <section class="page-hero">
-        <div class="container page-hero-inner">
-          <nav class="breadcrumb" aria-label="Breadcrumb">
-            <ol><li><a href="/">Home</a></li><li aria-current="page">About</li></ol>
-          </nav>
-          <h1>About A1 Lawn Care</h1>
-          <p>A Mount Gravatt lawn and garden business, run by Steve Cope, servicing more
-             than 150 suburbs across Brisbane south, Bayside, Logan and the Redlands
-             &mdash; and a registered NDIS provider.</p>
-          <div class="btn-row">
-            <a class="btn btn--lg" href="/contact/">Get a free quote {arrow}</a>
-            <a class="btn btn--outline-light btn--lg" href="{phone_href}">{phone} {phone_display}</a>
+      <section class="page-hero page-hero--split">
+        <div class="container page-hero-grid">
+          <div class="page-hero-inner">
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+              <ol><li><a href="/">Home</a></li><li aria-current="page">About</li></ol>
+            </nav>
+            <h1>About A1 Lawn Care</h1>
+            <p>A Mount Gravatt lawn and garden business, run by Steve Cope, servicing more
+               than 150 suburbs across Brisbane south, Bayside, Logan and the Redlands
+               &mdash; and a registered NDIS provider.</p>
+            <div class="btn-row">
+              <a class="btn btn--lg" href="/contact/">Get a free quote {arrow}</a>
+              <a class="btn btn--outline-light btn--lg" href="{phone_href}">{phone} {phone_display}</a>
+            </div>
           </div>
+          {hero_photo}
         </div>
       </section>
 
@@ -2192,9 +2288,9 @@ def build_about():
                  hard to clear.</p>
             </div>
             <div class="reveal">
-              <img src="/assets/img/about-a1-lawn-care.webp" width="900" height="620"
-                   style="border-radius:24px" decoding="async"
-                   alt="Lawn mower on a freshly cut green lawn - A1 Lawn Care Brisbane">
+              <img src="/assets/img/about-a1-lawn-care.webp" width="1700" height="800"
+                   style="border-radius:24px" loading="lazy" decoding="async"
+                   alt="Lawn mower on a freshly mown green lawn - A1 Lawn Care Brisbane">
             </div>
           </div>
         </div>
@@ -2262,6 +2358,11 @@ def build_about():
 
 {cta}
 """.format(
+        hero_photo=hero_media(
+            "gallery-02.webp",
+            "Front lawn and trimmed hedges maintained by A1 Lawn Care on a "
+            "Brisbane southside street",
+        ),
         arrow=icon("arrow"),
         phone=icon("phone"),
         pin_ic=icon("pin"),
@@ -2306,14 +2407,17 @@ def build_contact():
     map_q = SITE["address_one_line"].replace(" ", "%20").replace(",", "%2C")
 
     body = """
-      <section class="page-hero">
-        <div class="container page-hero-inner">
-          <nav class="breadcrumb" aria-label="Breadcrumb">
-            <ol><li><a href="/">Home</a></li><li aria-current="page">Contact</li></ol>
-          </nav>
-          <h1>Get a Free Lawn Care Quote in Brisbane</h1>
-          <p>Tell us the address and what needs doing. You will get a fixed price back,
-             usually the same day. No obligation, and no hourly-rate surprises.</p>
+      <section class="page-hero page-hero--split">
+        <div class="container page-hero-grid">
+          <div class="page-hero-inner">
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+              <ol><li><a href="/">Home</a></li><li aria-current="page">Contact</li></ol>
+            </nav>
+            <h1>Get a Free Lawn Care Quote in Brisbane</h1>
+            <p>Tell us the address and what needs doing. You will get a fixed price back,
+               usually the same day. No obligation, and no hourly-rate surprises.</p>
+          </div>
+          {hero_photo}
         </div>
       </section>
 
@@ -2380,6 +2484,10 @@ def build_contact():
             "Request your free quote",
             "Every field marked with an asterisk helps us price the job accurately "
             "first time.",
+        ),
+        hero_photo=hero_media(
+            "gallery-08.webp",
+            "Freshly mown lawn with a rock border, maintained by A1 Lawn Care Brisbane",
         ),
         phone_ic=icon("phone"),
         phone_ic2=icon("phone"),

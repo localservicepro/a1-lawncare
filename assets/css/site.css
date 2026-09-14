@@ -46,6 +46,7 @@
 
 /* ---------- Reset ---------- */
 *, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 body {
   margin: 0;
@@ -554,10 +555,24 @@ form.is-submitting .btn { opacity: .72; pointer-events: none; }
   animation: drift 26s ease-in-out infinite alternate;
 }
 .page-hero-inner { padding-block: clamp(46px, 5.5vw, 86px); max-width: 780px; }
-.page-hero--photo::after {
-  content: ""; position: absolute; inset: 0; z-index: -2;
-  background: url("/assets/img/gardener-at-work.webp") center/cover no-repeat;
-  opacity: .22;
+
+/* Split hero: heading left, photograph right. */
+.page-hero-grid {
+  display: grid; align-items: center;
+  gap: clamp(24px, 3.4vw, 54px);
+  grid-template-columns: minmax(0, 1.04fr) minmax(0, .96fr);
+}
+.page-hero--split .page-hero-inner { max-width: none; }
+.page-hero-media {
+  margin: 0; border-radius: var(--radius-lg); overflow: hidden;
+  aspect-ratio: 5 / 4; box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, .14);
+}
+.page-hero-media img { width: 100%; height: 100%; object-fit: cover; }
+@media (max-width: 940px) {
+  .page-hero-grid { grid-template-columns: 1fr; }
+  .page-hero--split .page-hero-inner { padding-bottom: 0; }
+  .page-hero-media { aspect-ratio: 16 / 10; margin-bottom: clamp(40px, 5vw, 64px); }
 }
 .page-hero h1 { color: #fff; }
 .page-hero p { color: #B6CCBE; font-size: 1.06rem; margin-bottom: 0; }
@@ -732,4 +747,69 @@ form.is-submitting .btn { opacity: .72; pointer-events: none; }
     transition-duration: .001ms !important;
   }
   .reveal, .reveal-stagger > * { opacity: 1 !important; transform: none !important; }
+}
+
+
+/* ---------- Hero photography ----------
+   A real <img> so it carries alt text and can be prioritised for LCP; the
+   readability scrim sits on top of it, still behind the hero content. */
+.hero-photo { position: absolute; inset: 0; z-index: -3; overflow: hidden; }
+.hero-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center 46%; }
+.hero-photo::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(
+    100deg,
+    rgba(4, 31, 17, .95) 0%,
+    rgba(4, 31, 17, .86) 34%,
+    rgba(4, 31, 17, .62) 68%,
+    rgba(4, 31, 17, .44) 100%);
+}
+/* Narrow screens stack the hero, so the text sits over the whole image. */
+@media (max-width: 940px) {
+  .hero-photo::after { background: rgba(4, 31, 17, .90); }
+}
+.hero--photo { position: relative; }
+
+/* ---------- Quote modal ---------- */
+.modal {
+  position: fixed; inset: 0; z-index: 90;
+  display: grid; place-items: center;
+  padding: 20px;
+}
+.modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(4, 31, 17, .64);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  opacity: 0; transition: opacity .3s var(--ease);
+}
+.modal.is-open .modal-backdrop { opacity: 1; }
+.modal-panel {
+  position: relative;
+  width: min(580px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  opacity: 0; transform: translateY(18px) scale(.975);
+  transition: opacity .34s var(--ease), transform .34s var(--ease);
+}
+.modal.is-open .modal-panel { opacity: 1; transform: none; }
+.modal-close {
+  position: absolute; top: 14px; right: 14px; z-index: 2;
+  width: 38px; height: 38px; border: 0; border-radius: 50%;
+  background: var(--sand); color: var(--ink); cursor: pointer;
+  display: grid; place-items: center;
+  transition: background-color .2s, transform .3s var(--ease);
+}
+.modal-close svg { width: 17px; height: 17px; }
+.modal-close:hover { background: var(--line); transform: rotate(90deg); }
+.modal-panel h2 { padding-right: 46px; }
+body.modal-open { overflow: hidden; }
+
+/* The mobile bar's quote control is a <button> when it opens the modal. */
+.mobile-bar button {
+  font: inherit; border: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: .5em;
+  padding: .95em .6em;
+  font-family: var(--font-display); font-weight: 600; font-size: .95rem;
+  background: var(--brand-grad); color: #fff;
 }

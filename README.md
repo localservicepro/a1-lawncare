@@ -46,7 +46,7 @@ Edit content in `build.py`, not in the generated HTML — a rebuild overwrites i
 ```
 build.py                     content + templates (the source of truth)
 assets/css/site.css          design system and animations
-assets/js/site.js            nav, scroll reveal, counters, FAQ, forms
+assets/js/site.js            nav, scroll reveal, counters, FAQ, forms, quote modal
 assets/img/                  photography (see below)
 tools/fetch-drive-images.sh  pulls the client photos from Google Drive
 index.html, services/…       generated output — committed, do not hand-edit
@@ -83,9 +83,19 @@ Plus a honeypot field, `company_website`, hidden from people. If it is filled
 in, the submission is dropped silently — **do not map it to a CRM field.**
 
 **Submit flow.** `site.js` validates, lets the submit event reach the tracking
-script, then redirects to `/thank-you/` after 650 ms. Forms appear on the
-homepage, `/contact/` and all six service pages — all eight redirect to
-`/thank-you/`.
+script, then redirects to `/thank-you/` after 650 ms.
+
+**Where the forms are.** Inline on the homepage, `/contact/` and all six
+service pages. On top of that, every page *except* `/contact/` carries the same
+form again inside a **quote modal** — the header "Free quote" button and the
+mobile bottom bar open it rather than navigating away. On `/contact/` those two
+controls are plain anchors to `#contact-quote`, since the form is already the
+page. Every form redirects to `/thank-you/`.
+
+The modal is `#quote-modal`, built by `quote_modal()` in `build.py`; any control
+carrying `data-quote-open` opens it. It traps focus, closes on Escape, backdrop
+click or the close button, locks body scroll, and restores focus to whatever
+opened it.
 
 Service pages pre-select the matching option in *Service Needed*.
 `/contact/?service=Lawn+mowing` also pre-selects from the query string, which
@@ -115,8 +125,8 @@ treatments, and so on. Alt text follows the pattern the research specifies
 (`Lawn mowing Mount Gravatt - … - A1 Lawn Care`).
 
 `about-a1-lawn-care.webp` and `gardener-at-work.webp` are stock, not A1's own
-work, so they are used decoratively only (the about page and the services hero)
-and their alt text does not claim otherwise. Captions in the "Our recent work"
+work, so they are used decoratively only (the homepage hero backdrop and the
+about page) and their alt text does not claim otherwise. Captions in the "Our recent work"
 gallery describe what is in frame and deliberately name no suburb — the source
 files carry no location data.
 
@@ -125,6 +135,17 @@ files carry no location data.
 > before/after of a cocos palm coming out would be the single most valuable
 > photo to add, given that page targets the highest-CPC keyword in the research
 > ($12.42 a click).
+
+---
+
+## Hero images
+
+The homepage hero uses a full-bleed photograph behind a readability scrim
+(`.hero-photo`). The interior pages use a split hero instead — heading left,
+photograph in a card on the right (`.page-hero--split`) — because the job photos
+are 600x480 and a card keeps them near native size rather than upscaling them
+across a full-width background. On narrow screens the card stacks under the
+heading.
 
 ---
 
