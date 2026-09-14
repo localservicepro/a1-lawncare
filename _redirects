@@ -1,0 +1,5 @@
+# Legacy paths from the previous WordPress site
+/services/*   /services/:splat   301
+/contact-us/  /contact/          301
+/about-us/    /about/            301
+/thank-you    /thank-you/        301
